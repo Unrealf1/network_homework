@@ -10,7 +10,7 @@
 #include <span>
 
 
-inline int check_error(int result, const std::source_location location = std::source_location::current()) {
+inline ssize_t check_error(ssize_t result, const std::source_location location = std::source_location::current()) {
     if (result >= 0) {
         return result;
     }
@@ -18,6 +18,9 @@ inline int check_error(int result, const std::source_location location = std::so
     spdlog::error("{}. In \"{}\":{} ({})", strerror(errno), location.file_name(), location.line(), location.function_name());
 
     return result;
+}
+inline int check_error(int result, const std::source_location location = std::source_location::current()) {
+    return int(check_error(ssize_t(result), location));
 }
 
 struct Epoll {
@@ -64,6 +67,8 @@ private:
     int m_descriptor;
 };
 
+using std::literals::string_view_literals::operator""sv;
+inline static const auto s_heartbeat_msg = "still alive"sv;
 inline static const char* const s_port = "7946";
 inline static const size_t s_max_message_size = 512;
 inline static char s_message_buffer[s_max_message_size];

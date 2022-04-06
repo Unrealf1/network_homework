@@ -11,6 +11,7 @@ SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(cmake/CPM.cmake)
 
 CPMAddPackage("gh:gabime/spdlog@1.9.2")
+CPMAddPackage("gh:jarro2783/cxxopts@3.0.0")
 
 add_library(project_options INTERFACE)
 add_library(project_warnings INTERFACE)

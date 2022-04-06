@@ -2,12 +2,14 @@
 #include <spdlog/spdlog.h>
 #include "common.hpp"
 #include "socket_tools.h"
+#include <string_view>
 #include <unordered_map>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <compare>
+#include <cxxopts.hpp>
 
 
 struct user_info {
@@ -39,19 +41,30 @@ struct fmt::formatter<user_info> {
 };
 
 
-int main() {
+int main(int argc, char** argv) {
+    cxxopts::Options options("server");
+    options.add_options()
+        ("p,port", "Specify port", cxxopts::value<std::string>()->default_value(s_port))
+        ("h,help", "Show help")
+        ;
+    auto parsed = options.parse(argc, argv);
+    if (parsed.count("h") > 0) {
+        std::cout << options.help() << '\n';
+        return 0;
+    }
+    auto port = parsed["p"].as<std::string>();
     spdlog::info("starting server");
     Epoll epoll;
     epoll.set_timeout(5000);
     
-    auto server = create_dgram_socket(nullptr, s_port, nullptr);
+    auto server = create_dgram_socket(nullptr, port.c_str(), nullptr);
     epoll.add(server);
 
     std::unordered_map<user_info, std::string> clients;
 
     auto register_client = [&](user_info client, size_t bytes_read) {
         if (bytes_read > 0) {
-            std::string client_id {s_message_buffer};
+            std::string client_id { s_message_buffer, bytes_read };
             clients.insert({client, client_id});
             spdlog::info("registered new client! id = {}; info = {}", client_id, client);
         } else {
@@ -69,7 +82,15 @@ int main() {
         } 
         
         if (bytes_read > 0) {
-            spdlog::info("got message {} from client {}({})", std::string(s_message_buffer), id->second, info);
+            std::string_view client_message(s_message_buffer, bytes_read);
+            if (client_message == s_heartbeat_msg) {
+                spdlog::info("Huge success {}", info);
+                return;
+            }
+            spdlog::info("got message {} from client {}({})", client_message, id->second, info);
+            std::string answer = fmt::format("Hello, client {}, thank you for message \"{}\"", id->second, client_message);
+            spdlog::info("answering with {}", answer);
+            check_error(sendto(server, answer.c_str(), answer.size(), 0, reinterpret_cast<const sockaddr*>(&address), sizeof(address)));
         }
     };
 
@@ -97,11 +118,13 @@ int main() {
             auto read = check_error(recvfrom(server, s_message_buffer, s_max_message_size, 0, &client_address, &address_len));
 
             if (client_address.sa_family != AF_INET) {
-                //spdlog::error("cannot process not ip4 connections (got {})", client_address.sa_family);
-                //continue;
+                spdlog::error("cannot process not ip4 connections (got {})", client_address.sa_family);
+                continue;
             }
-            auto& r = client_address;
-            process_client_input(reinterpret_cast<sockaddr_in&>(r), read);
+            auto& actual_address = reinterpret_cast<sockaddr_in&>(client_address);
+            if (read > 0) {
+                process_client_input(actual_address, size_t(read));
+            }
         }
     }
 }

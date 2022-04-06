@@ -42,7 +42,7 @@ struct fmt::formatter<user_info> {
 int main() {
     spdlog::info("starting server");
     Epoll epoll;
-    epoll.set_timeout(1000);
+    epoll.set_timeout(5000);
     
     auto server = create_dgram_socket(nullptr, s_port, nullptr);
     epoll.add(server);
@@ -85,20 +85,20 @@ int main() {
                 spdlog::warn("unexpected events mask: {}", event.events);
                 continue;
             }
-            /*
+            
             if (event.data.fd != server) {
                 spdlog::error("wait, why do I have more sockets? Server socket is {}, given socket is {}", server, event.data.fd);
                 continue;
-            }*/
+            }
             
             sockaddr client_address;
             memset(&client_address, 0, sizeof(client_address));
-            socklen_t address_len = 0;
+            socklen_t address_len = sizeof(client_address);
             auto read = check_error(recvfrom(server, s_message_buffer, s_max_message_size, 0, &client_address, &address_len));
 
             if (client_address.sa_family != AF_INET) {
-                spdlog::error("cannot process not ip4 connections (got {})", client_address.sa_family);
-                continue;
+                //spdlog::error("cannot process not ip4 connections (got {})", client_address.sa_family);
+                //continue;
             }
             auto& r = client_address;
             process_client_input(reinterpret_cast<sockaddr_in&>(r), read);

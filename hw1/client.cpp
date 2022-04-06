@@ -28,9 +28,17 @@ int main() {
     auto client = create_dgram_socket("localhost", s_port, &my_info);
     epoll.add(client);
 
-    auto send_data = [&]() {
-        ssize_t res = sendto(client, "abacaba", 8, 0, my_info.ai_addr, my_info.ai_addrlen);
+    int step = 0;
+    auto send_data = [&]() mutable {
+        std::string msg = std::to_string(step++);
+        ssize_t res = sendto(client, msg.c_str(), msg.size(), 0, my_info.ai_addr, my_info.ai_addrlen);
     };
+    
+    auto register_self = [&]() mutable {
+        std::string msg = std::to_string(rand());
+        ssize_t res = sendto(client, msg.c_str(), msg.size(), 0, my_info.ai_addr, my_info.ai_addrlen);
+    };
+    register_self();
 
     while (true) {
         send_data();
@@ -54,7 +62,7 @@ int main() {
             
             sockaddr server_address;
             memset(&server_address, 0, sizeof(server_address));
-            socklen_t address_len = 0;
+            socklen_t address_len = sizeof(server_address); 
             auto read = check_error(recvfrom(client, s_message_buffer, s_max_message_size, 0, &server_address, &address_len));
 
             if (server_address.sa_family != AF_INET) {

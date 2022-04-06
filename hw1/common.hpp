@@ -29,7 +29,7 @@ public:
     Epoll(): Epoll(epoll_create1(0)) {}
 
     int add(int descriptor, uint32_t events = EPOLLIN) {
-        epoll_event event = {.events = events, .data{.ptr = nullptr}};
+        epoll_event event = {.events = events, .data{.fd = descriptor}};
         return check_error(epoll_ctl(m_descriptor, EPOLL_CTL_ADD, descriptor, &event));
     }
 

@@ -8,19 +8,8 @@
 #include <cxxopts.hpp>
 #include <thread>
 #include <sys/timerfd.h>
+#include <netdb.h>
 
-
-struct addrinfo
-{
-  int ai_flags;			/* Input flags.  */
-  int ai_family;		/* Protocol family for socket.  */
-  int ai_socktype;		/* Socket type.  */
-  int ai_protocol;		/* Protocol for socket.  */
-  socklen_t ai_addrlen;		/* Length of socket address.  */
-  struct sockaddr *ai_addr;	/* Socket address for socket.  */
-  char *ai_canonname;		/* Canonical name for service location.  */
-  struct addrinfo *ai_next;	/* Pointer to next in list.  */
-};
 
 
 int main(int argc, char** argv) {
@@ -41,7 +30,7 @@ int main(int argc, char** argv) {
 
     Epoll epoll;
     epoll.set_timeout(5000);
-    // listen for stdin
+    // listen for stdin (user input)
     epoll.add(0);
     
     // create client socket
@@ -111,7 +100,6 @@ int main(int argc, char** argv) {
                 } else {
                     spdlog::warn("empty input from server");
                 }
-
             } else {
                 spdlog::warn("unknown file descriptor!");
             }

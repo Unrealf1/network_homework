@@ -69,7 +69,7 @@ private:
 
 using std::literals::string_view_literals::operator""sv;
 inline static const auto s_heartbeat_msg = "still alive"sv;
+inline static const int s_heartbeat_delay_millis = 2000;
 inline static const char* const s_port = "7946";
 inline static const size_t s_max_message_size = 512;
 inline static char s_message_buffer[s_max_message_size];
-

@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
 
     // create timer for heartbeat
     timespec time;
-    time.tv_sec = 3;
+    time.tv_sec = s_heartbeat_delay_millis / 1000;
     time.tv_nsec = 0;
 
     itimerspec spec;

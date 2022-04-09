@@ -23,4 +23,5 @@ include(cmake/Sanitizers.cmake)
 enable_sanitizers(project_options)
 
 add_subdirectory(hw1)
+add_subdirectory(hw2)
 

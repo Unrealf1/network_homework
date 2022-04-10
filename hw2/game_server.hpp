@@ -57,12 +57,8 @@ public:
         m_timer_tasks.emplace_back(
             1000ms, [this]() {
                 // send system_time
-                auto data = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - m_start_time);
-                Message message;
-                message.type = Message::Type::game_data;
-                auto bytes = reinterpret_cast<std::byte*>(&data);
-                message.data = {bytes, bytes + sizeof(data)};
-                broadcast_message<true>(message);
+                auto time = clock_t::now() - m_start_time;
+                broadcast_message<true>(game_data_message(time));
             }
         );
     }
@@ -76,7 +72,7 @@ public:
             }
 
             if (event.type == ENET_EVENT_TYPE_CONNECT) {
-                spdlog::info("connection with {} established", event.peer->address.host, event.peer->address.port);
+                spdlog::info("connection with {}:{} established", event.peer->address.host, event.peer->address.port);
                 auto player = create_player(event.peer->address);
                 broadcast_new_player(player);
                 add_player(player);

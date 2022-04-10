@@ -15,7 +15,7 @@ int main() {
 
     ENetAddress address;
     address.host = ENET_HOST_ANY;
-    address.port = game_server_port;
+    address.port = s_game_server_port;
     
     size_t peer_count = 32;
     size_t channel_limit = 2;

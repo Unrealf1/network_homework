@@ -49,6 +49,8 @@ struct Player {
     std::string name;
     ENetAddress address;
     uint32_t id;
+    uint32_t ping;
+    int64_t data;
 };
 
 inline std::vector<std::byte> player_to_bytes(const Player& player) {
@@ -58,6 +60,8 @@ inline std::vector<std::byte> player_to_bytes(const Player& player) {
     js["host"] = player.address.host;
     js["port"] = player.address.port;
     js["id"] = player.id;
+    js["ping"] = player.ping;
+    js["data"] = player.data;
     auto str = js.dump();
     std::vector<std::byte> result;
     result.reserve(str.size());
@@ -65,25 +69,26 @@ inline std::vector<std::byte> player_to_bytes(const Player& player) {
     return result; 
 }
 
-inline Player player_from_bytes(std::span<std::byte> bytes) {
+inline nlohmann::json json_from_bytes(std::span<std::byte> bytes) {
     using nlohmann::json;
     std::string str;
     str.reserve(bytes.size());
     std::transform(bytes.begin(),bytes.end(), std::back_inserter(str), [](std::byte b) {return char(b);});
-    json js = json::parse(str);
+    return json::parse(std::move(str));
+}
+
+inline Player player_from_bytes(std::span<std::byte> bytes) {
+    auto js = json_from_bytes(bytes);
     return {
         .name = js["name"],
-        .address = { js["hoset"], js["port"]  },
-        .id = js["id"]
+        .address = { js["host"], js["port"]  },
+        .id = js["id"],
+        .ping = js["ping"],
+        .data = js["data"]
     };
 }
 
-#include <iostream>
 inline Message message_from_bytes(std::span<std::byte> bytes) {
-    for (size_t i = 0; i < bytes.size(); ++i) {
-        std::cout << i << ": " << int(bytes[i]) << "  "; 
-    }
-    std::cout << std::endl;
     Message::Type type = *reinterpret_cast<Message::Type*>(bytes.data());
     return { type, { bytes.begin() + sizeof(Message::Type), bytes.end() } };
 }
@@ -94,13 +99,14 @@ inline Message message_from_chars(std::span<T> chars) {
 }
 
 inline Message game_data_message(auto time) {
-    auto data = std::chrono::duration_cast<std::chrono::milliseconds>(time).count();
+    auto data = decltype(Player::data)(std::chrono::duration_cast<std::chrono::milliseconds>(time).count());
     Message message;
     message.type = Message::Type::game_data;
     auto bytes = reinterpret_cast<std::byte*>(&data);
     message.data = {bytes, bytes + sizeof(data)};
     return message;
 }
+
 
 inline static const uint16_t s_game_server_port = 7946;
 inline static const uint16_t s_lobby_server_port = 7964;

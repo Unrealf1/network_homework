@@ -31,6 +31,7 @@ int main() {
 
     if (server == nullptr) {
         spdlog::error("could node create enet server");
+        exit(1);
     }
     GameServer game_server(server);
     game_server.run();

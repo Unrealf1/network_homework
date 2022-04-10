@@ -32,6 +32,7 @@ int main() {
 
     if (server == nullptr) {
         spdlog::error("could node create enet server");
+        exit(1);
     }
     LobbyServer lobby_server(server);
     lobby_server.run();

@@ -12,6 +12,7 @@ include(cmake/CPM.cmake)
 
 CPMAddPackage("gh:gabime/spdlog@1.9.2")
 CPMAddPackage("gh:jarro2783/cxxopts@3.0.0")
+CPMAddPackage("gh:nlohmann/json@3.10.5")
 
 add_library(project_options INTERFACE)
 add_library(project_warnings INTERFACE)

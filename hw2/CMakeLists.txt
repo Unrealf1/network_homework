@@ -9,9 +9,12 @@ endif()
 
 add_executable(client2 client.cpp)
 target_link_libraries(client2 PRIVATE project_options project_warnings)
-target_link_libraries(client2 PUBLIC spdlog cxxopts enet)
+target_link_libraries(client2 PUBLIC spdlog cxxopts nlohmann_json::nlohmann_json enet)
 
-add_executable(server2 server.cpp)
+add_executable(server2 server.cpp game_server.hpp)
 target_link_libraries(server2 PRIVATE project_options project_warnings)
-target_link_libraries(server2 PUBLIC spdlog cxxopts enet)
+target_link_libraries(server2 PUBLIC spdlog cxxopts nlohmann_json::nlohmann_json enet)
 
+add_executable(lobby2 lobby.cpp)
+target_link_libraries(lobby2 PRIVATE project_options project_warnings)
+target_link_libraries(lobby2 PUBLIC spdlog cxxopts nlohmann_json::nlohmann_json enet)

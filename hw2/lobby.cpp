@@ -1,12 +1,13 @@
 #include  <spdlog/spdlog.h>
 #include  <enet/enet.h>
+
 #include "common.hpp"
-#include "game_server.hpp"
+#include "lobby_server.hpp"
 
 
 int main() {
-    setup_logger("Game Server");
-    spdlog::info("starting server");
+    setup_logger("Lobby");
+    spdlog::info("starting lobby server");
 
     if (int error = enet_initialize() != 0) {
         spdlog::error("could not initialize enet, error code {}", error);
@@ -15,7 +16,7 @@ int main() {
 
     ENetAddress address;
     address.host = ENET_HOST_ANY;
-    address.port = game_server_port;
+    address.port = lobby_server_port;
     
     size_t peer_count = 32;
     size_t channel_limit = 2;
@@ -32,7 +33,7 @@ int main() {
     if (server == nullptr) {
         spdlog::error("could node create enet server");
     }
-    GameServer game_server(server);
-    game_server.run();
+    LobbyServer lobby_server(server);
+    lobby_server.run();
 }
 

@@ -74,11 +74,12 @@ public:
             if (event.type == ENET_EVENT_TYPE_CONNECT) {
                 spdlog::info("connection with {}:{} established", event.peer->address.host, event.peer->address.port);
                 auto player = create_player(event.peer->address);
+                spdlog::info("added player {}", player.name);
                 broadcast_new_player(player);
                 add_player(player);
                 event.peer->data = reinterpret_cast<void*>(player.id);
             } else if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-                spdlog::warn("game server should not recieve any data");
+                spdlog::info("game server got data");
             } else if (event.type == ENET_EVENT_TYPE_NONE) {
                 spdlog::info("no events event");
             } else {

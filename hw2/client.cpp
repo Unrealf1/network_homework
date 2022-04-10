@@ -24,7 +24,7 @@ int main() {
     setup_logger("client");
     spdlog::info("starting client");
 
-    auto client = enet_host_create(nullptr, 1, 2, 0, 0);
+    auto client = enet_host_create(nullptr, 2, 2, 0, 0);
     if (client == nullptr) {
         spdlog::error("could node create enet client");
     }
@@ -54,6 +54,7 @@ int main() {
         }
         auto time = start_time - std::chrono::steady_clock::now();
         send_message<true>(game_data_message(time), game_server);
+        spdlog::info("sent update to the server");
     };
     
     auto start_session = [&]() {
@@ -74,8 +75,10 @@ int main() {
         
         json js = json::parse(str);
         ENetAddress game_address;
-        game_address.port = js["port"];
-        game_address.host = js["host"];
+        game_address.port = s_game_server_port;
+        enet_address_set_host(&game_address, "localhost");
+        //game_address.port = js["port"];
+        //game_address.host = js["host"];
         spdlog::info("Connecting to the game server ({}:{})", game_address.host, game_address.port);
         game_server = enet_host_connect(client, &game_address, 2, 0);
         if (game_server == nullptr) {
@@ -131,6 +134,7 @@ int main() {
             auto time = std::chrono::steady_clock::now();
             if (time - last_gaming_update > gaming_update_interval) {
                 send_gaming_update();
+                last_gaming_update = time;
             }
         }
     }

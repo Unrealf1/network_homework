@@ -29,7 +29,7 @@ inline void send_message(const Message& message, ENetPeer* where) {
 
     memcpy(local_buffer, &(message.type), sizeof(message.type));
     memcpy(local_buffer + sizeof(message.type), message.data.data(), message.data.size());
-    spdlog::warn("buffer[0] is {}", local_buffer[0]);
+    //spdlog::warn("buffer[0] is {}", local_buffer[0]);
 
     const auto reliability_flag = is_reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED;
     const auto channel_number = is_reliable ? 0 : 1;
@@ -37,7 +37,7 @@ inline void send_message(const Message& message, ENetPeer* where) {
 
     enet_peer_send(where, channel_number, packet);
 
-    enet_packet_destroy(packet);
+    //enet_packet_destroy(packet);
     delete[] local_buffer;
 }
 

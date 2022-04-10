@@ -40,7 +40,6 @@ public:
                     spdlog::info("starting a game session!");
                     start_session();
                 }
-                spdlog::warn("unsupported message type: {}", message.type);
             } else if (event.type == ENET_EVENT_TYPE_NONE) {
                 spdlog::info("no events event");
             } else {

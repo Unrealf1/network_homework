@@ -22,7 +22,7 @@ public:
     InByteStream(const T&... args): ByteStream(args...) {}
 
     template<typename T>
-    void get(T& item) {
+    void read(T& item) {
         decltype(m_buffer)::iterator::difference_type size = sizeof(item);
         if (size > std::distance(m_cursor, m_buffer.end())) {
             throw std::out_of_range("Not enough bytes to read");
@@ -34,7 +34,7 @@ public:
 
     template<typename T>
     ByteStream& operator>>(T& item) {
-        get(item);
+        read(item);
         return *this;
     }
 };
@@ -45,7 +45,7 @@ public:
     OutByteStream(const T&... args): ByteStream(args...) {}
 
     template<typename T>
-    void put(const T& item) {
+    void write(const T& item) {
         decltype(m_buffer)::iterator::difference_type size = sizeof(item);
         if (size > std::distance(m_cursor, m_buffer.end())) {
             throw std::out_of_range("Not enough bytes to read");
@@ -57,7 +57,7 @@ public:
 
     template<typename T>
     ByteStream& operator<<(const T& item) {
-        put(item);
+        write(item);
         return *this;
     }
 };

@@ -33,7 +33,6 @@ int main() {
         spdlog::error("could node create enet client");
         exit(1);
     }
-
     
     ENetAddress address;
     enet_address_set_host(&address, "localhost");

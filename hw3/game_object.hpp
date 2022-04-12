@@ -12,4 +12,3 @@ struct GameObject {
     uint32_t id;
 };
 
-

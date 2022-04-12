@@ -36,9 +36,9 @@ if(allegro_ADDED)
   endforeach()
 endif()
 
-set(external_libraries spdlog cxxopts nlohmann_json::nlohmann_json enet allegro allegro_font allegro_primitives glm)
+set(external_libraries spdlog cxxopts nlohmann_json::nlohmann_json enet allegro allegro_font allegro_primitives glm ftxui::screen ftxui::dom)
 
-add_executable(server3 server.cpp)
+add_executable(server3 server.cpp game_server.cpp)
 target_link_libraries(server3 PRIVATE project_options project_warnings)
 target_link_libraries(server3 PUBLIC ${external_libraries} bytestream)
 

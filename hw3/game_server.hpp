@@ -29,12 +29,22 @@ public:
 
     void run();
 
+private:
     size_t m_last_num_players = 0;
     void update_screen();
 
     Player create_player(const ENetAddress& address) {
         auto id = generate_id();
-        return { generate_name(id), address, id, 0 };
+        Player player;
+        player.name = generate_name(id); 
+        player.address = address; 
+        player.id = id; 
+        player.ping = 0;
+        return player;
+    }
+
+    GameObject create_game_object(uint32_t player_id) {
+        return {};
     }
 
     template<typename T>
@@ -68,10 +78,8 @@ public:
 
     std::span<ENetPeer> get_peers() {
         return {m_host->peers,  m_host->peerCount};
-
     }
 
-private:
     std::string generate_name(uint64_t id) {
         return s_nicknames[std::hash<uint64_t>{}(id) % s_nicknames.size()];      
     }
@@ -117,10 +125,26 @@ private:
     }
 
     void update_players() {
-        // TODO: send update info to players
+        OutByteStream update_info;
+        write_objects(update_info);
+        broadcast_message<false>(update_info.get_span());
     }
 
+    void random_teleport(GameObject& obj) {
+        // TODO: random teleport   
+    }
+
+    void write_objects(OutByteStream& ostr) {
+        ostr << uint32_t(m_game_objects.size());
+        for (const auto& object : m_game_objects) {
+            ostr << object;
+        }
+    }
+
+
     players_t m_players;
+    std::vector<GameObject> m_game_objects;
+    std::map<uint32_t, uint32_t> m_player_to_object;
     uint32_t m_next_player_id = 0;
     ENetHost* m_host;
     TimedTaskManager<game_clock_t> m_task_manager;

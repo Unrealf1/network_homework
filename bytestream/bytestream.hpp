@@ -5,6 +5,8 @@
 #include <exception>
 #include <stdexcept>
 #include <cstring>
+#include <type_traits>
+#include <vector>
 
 
 class InByteStream {
@@ -36,8 +38,11 @@ public:
     void read(std::string& str) {
         auto char_ptr = reinterpret_cast<char*>(&(*m_cursor));
         auto len = strlen(char_ptr);
+        if (int64_t(len) > std::distance(m_cursor, m_buffer.end())) {
+            throw std::out_of_range("Not enough bytes to read string");
+        }
         str = std::string(char_ptr, len);
-        m_cursor += len + 1;
+        m_cursor += int64_t(len) + 1;
     }
 
     template<typename T>
@@ -56,7 +61,7 @@ public:
     OutByteStream(size_t initial_size = 20) : m_buffer(initial_size) { }
 
     template<typename T>
-    void write(const T& item) {
+    std::enable_if_t<std::is_trivially_copyable_v<T>, void>  write(const T& item) {
         auto size = sizeof(item);
         if (size > m_buffer.size() - m_cursor) {
             m_buffer.resize(m_buffer.size() + size);
@@ -72,7 +77,10 @@ public:
         if (len > m_buffer.size() - m_cursor) {
             m_buffer.resize(m_buffer.size() + len);
         }
-        memcpy(get_write_address(), &char_ptr, len);
+        if (*(char_ptr + len - 1) != 0) {
+            throw std::runtime_error("string should end with \\0");
+        }
+        memcpy(get_write_address(), char_ptr, len);
         m_cursor += len;
     }
 
@@ -82,6 +90,10 @@ public:
         }
         memcpy(get_write_address(), bytes.data(), bytes.size());
         m_cursor += bytes.size();
+    }
+
+    void write(const std::vector<std::byte>& vector) {
+        write(std::span(vector.data(), vector.size()));
     }
 
     template<typename T>
@@ -99,7 +111,7 @@ protected:
     size_t m_cursor = 0;
 
     std::byte* get_write_address() {
-        return &(*(m_buffer.begin() + m_cursor));
+        return &(*(m_buffer.begin() + int64_t(m_cursor)));
     }
 };
 

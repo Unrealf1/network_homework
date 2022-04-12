@@ -20,13 +20,13 @@ struct ClientInfo {
     uint32_t controlled_object_id;
 };
 
-using color_t = glm::ivec3;
+using color_t = glm::vec< 4, uint8_t, glm::defaultp >;
 using game_clock_t = std::chrono::steady_clock;
 
 namespace colors {
-    inline static color_t red = {255, 0, 0};
-    inline static color_t green = {0, 255, 0};
-    inline static color_t blue = {0, 0, 255};
+    inline static color_t red = {255, 0, 0, 255};
+    inline static color_t green = {0, 255, 0, 255};
+    inline static color_t blue = {0, 0, 255, 255};
 
     inline color_t create_color(uint32_t idx) {
         color_t colors[] = {red, green, blue};
@@ -35,7 +35,7 @@ namespace colors {
 }
 
 enum class MessageType: uint8_t {
-    game_update, cleanup, ping, list_update
+    game_update, ping, list_update, register_player
 };
 
 template<typename T>
@@ -48,6 +48,7 @@ std::vector<T> span_to_vector(const std::span<T>& span) {
 
 struct PlayerAddress {
     PlayerAddress(const ENetAddress& address): host(address.host), port(address.port) {}
+    PlayerAddress() = default;
 
     uint32_t host;
     uint16_t port;
@@ -63,6 +64,11 @@ struct PlayerAddress {
 };
 
 struct Player {
+    Player() = default;
+    Player(InByteStream& istr) {
+        istr >> name >> address.host >> address.port >> id >> ping;
+    }
+
     bool operator<(const Player& right) const {
         return id < right.id;
     }

@@ -3,8 +3,7 @@
 #include <enet/enet.h>
 #include <spdlog/spdlog.h>
 
-#include "common.hpp"
-
+#include "game_server.hpp"
 
 ENetHost* create_host() {
     if (int error = enet_initialize() != 0) {
@@ -37,6 +36,8 @@ ENetHost* create_host() {
 }
 
 int main() {
-    auto server = create_host();
+    auto host = create_host();
+    GameServer server(host); 
+    server.run();
 }
 

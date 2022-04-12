@@ -16,18 +16,27 @@ GameServer::GameServer(ENetHost* host)
 }
 
 void GameServer::run() {
+    auto frame_start = game_clock_t::now();
+    auto frame_end = frame_start + s_server_tick_time;
     // listen to net events
     ENetEvent event;
     while(int num_events = enet_host_service(m_host , &event, 0) >= 0) {
-        auto current_time = game_clock_t::now();
         if (num_events == 0) {
-            spdlog::warn("no events (this is strange, because when no events happen NONE event should appear)");
+            spdlog::warn("no events");
         }
 
         if (event.type == ENET_EVENT_TYPE_CONNECT) {
             auto player = create_player(event.peer->address);
             spdlog::info("added player {}", player.name);
             broadcast_new_player(player);
+            
+            auto new_object = create_game_object(player.id);
+
+            OutByteStream register_message;
+            register_message << new_object;
+            write_objects(register_message);
+            send_bytes<true>(register_message.get_span(), event.peer);
+
             for (const auto& old_player : m_players) {
                 OutByteStream out;
                 out << MessageType::list_update << old_player.to_bytes();
@@ -36,13 +45,14 @@ void GameServer::run() {
             add_player(player);
             event.peer->data = reinterpret_cast<void*>(player.id);
         } else if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-            spdlog::info("game server got data from {},{}", event.peer->address.host, event.peer->address.port);
             InByteStream istr(event.packet->data, event.packet->dataLength);
             MessageType type;
             istr >> type;
             if (type == MessageType::game_update) {
                 GameObject object;
                 istr >> object;
+            } else {
+                spdlog::warn("unsupported message type from client: {}", type);
             }
         } else if (event.type == ENET_EVENT_TYPE_NONE) {
             spdlog::info("no events event");
@@ -51,7 +61,7 @@ void GameServer::run() {
             auto player = get_player(event.peer->address);
             m_players.erase(player); 
         } else {
-            spdlog::warn("unsupported event type: {}", event.type);
+            spdlog::warn("unsupported network event type: {}", event.type);
         }
         
         m_task_manager.launch();

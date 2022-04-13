@@ -7,8 +7,8 @@
 using vec2 = glm::vec2;
 
 struct GameObject {
-    float radius;
     vec2 position;
+    float radius;
     uint32_t id;
 };
 

@@ -20,8 +20,8 @@ public:
     template<typename T>
     InByteStream(const T* begin, const T* end): InByteStream(begin, end - begin) {}
 
-    const std::span<std::byte>& get_span() const {
-        return m_buffer;
+    std::span<std::byte> get_span() {
+        return {m_cursor, m_buffer.end()};
     }
 
     template<typename T>
@@ -61,7 +61,7 @@ public:
     OutByteStream(size_t initial_size = 20) : m_buffer(initial_size) { }
 
     template<typename T>
-    std::enable_if_t<std::is_trivially_copyable_v<T>, void>  write(const T& item) {
+    std::enable_if_t<std::is_trivially_copyable_v<T>, void> write(const T& item) {
         auto size = sizeof(item);
         if (size > m_buffer.size() - m_cursor) {
             m_buffer.resize(m_buffer.size() + size);
@@ -84,7 +84,7 @@ public:
         m_cursor += len;
     }
 
-    void write(const std::span<std::byte>& bytes) {
+    void write(const std::span<const std::byte>& bytes) {
         if (bytes.size() > m_buffer.size() - m_cursor) {
             m_buffer.resize(m_buffer.size() + bytes.size());
         }
@@ -93,7 +93,8 @@ public:
     }
 
     void write(const std::vector<std::byte>& vector) {
-        write(std::span(vector.data(), vector.size()));
+        const std::span<const std::byte> span(vector.begin(), vector.end());
+        write(span);
     }
 
     template<typename T>

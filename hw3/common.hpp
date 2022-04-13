@@ -6,6 +6,7 @@
 #include <span>
 
 #include <glm/glm.hpp>
+#include <spdlog/spdlog.h>
 
 #include <bytestream.hpp>
 
@@ -34,8 +35,18 @@ namespace colors {
     }
 }
 
+template<typename T>
+void print_bytes(T& stream) {
+    auto bytes = stream.get_span();
+    std::string msg;
+    for (auto b : bytes) {
+        msg += fmt::format("{}, ", b);
+    }
+    spdlog::warn("bytes: {}", msg);
+}
+
 enum class MessageType: uint8_t {
-    game_update, ping, list_update, register_player
+    game_update, ping, list_update, register_player, reset
 };
 
 template<typename T>
@@ -52,15 +63,6 @@ struct PlayerAddress {
 
     uint32_t host;
     uint16_t port;
-
-    auto operator<=>(const PlayerAddress&) const = default;
-
-    std::vector<std::byte> to_bytes() const {
-         size_t size = sizeof(host) + sizeof(port);
-         OutByteStream ostr(size);
-         ostr << host << port;
-         return span_to_vector(ostr.get_span());
-    }
 };
 
 struct Player {
@@ -79,16 +81,15 @@ struct Player {
     uint32_t ping;
 
     std::vector<std::byte> to_bytes() const {
-        auto address_bytes = address.to_bytes();
         OutByteStream ostr;
-        ostr << name << std::span(address_bytes) << id << ping;
+        ostr << name << address.host << address.port << id << ping;
         return span_to_vector(ostr.get_span());
     }
 };
 
 
 template<bool is_reliable>
-inline void send_bytes(const std::span<std::byte> bytes, ENetPeer* where) {
+inline void send_bytes(const std::span<std::byte>& bytes, ENetPeer* where) {
     const auto reliability_flag = is_reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED;
     const auto channel_number = is_reliable ? 0 : 1;
     auto packet = enet_packet_create(bytes.data(), bytes.size(), reliability_flag); //TODO: add NO_ALLOC after debug
@@ -100,6 +101,7 @@ inline void send_bytes(const std::span<std::byte> bytes, ENetPeer* where) {
 
 
 inline static const std::chrono::milliseconds s_client_frame_time = 10ms;
-inline static const std::chrono::milliseconds s_server_tick_time = 100ms;
+inline static const std::chrono::milliseconds s_server_tick_time = 10ms;
+inline static const vec2 s_simulation_borders = {25, 25};
 inline static const uint16_t s_game_server_port = 7946;
 

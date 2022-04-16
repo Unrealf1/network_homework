@@ -7,6 +7,7 @@
 
 #include <glm/glm.hpp>
 #include <spdlog/spdlog.h>
+#include <enet/enet.h>
 
 #include <bytestream.hpp>
 

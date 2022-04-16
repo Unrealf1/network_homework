@@ -40,6 +40,10 @@ private:
     size_t m_last_num_players = 0;
     void update_screen();
 
+    void process_new_connection(ENetEvent&);
+    void process_data(ENetEvent&);
+    void process_disconnect(ENetEvent&);
+
     Player create_player(const ENetAddress& address) {
         auto id = generate_id();
         Player player;

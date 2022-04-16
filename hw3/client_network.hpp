@@ -7,7 +7,7 @@
 #include "client_state.hpp"
 
 
-std::pair<ENetHost*, ENetPeer*> setup_enet() {
+static std::pair<ENetHost*, ENetPeer*> setup_enet() {
     ENetHost* client = enet_host_create(nullptr, 2, 2, 0, 0);
     if (client == nullptr) {
         spdlog::error("could node create enet client");

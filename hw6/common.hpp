@@ -22,8 +22,14 @@ struct ClientInfo {
     uint32_t controlled_object_id;
 };
 
+struct GameServerInfo {
+    ENetAddress address;
+    uint64_t id;
+};
+
 using color_t = glm::vec< 4, uint8_t, glm::defaultp >;
 using game_clock_t = std::chrono::steady_clock;
+using bytes_t = std::vector<std::byte>;
 
 namespace colors {
     inline static color_t red = {255, 0, 0, 255};
@@ -47,7 +53,11 @@ void print_bytes(T& stream) {
 }
 
 enum class MessageType: uint8_t {
-    game_update, ping, list_update, register_player, reset, input
+    game_update, ping, list_update, 
+    register_player, reset, input, 
+    lobby_list_update, lobby_start, lobby_create, 
+    lobby_join, register_provider, server_ready
+    
 };
 
 template<typename T>
@@ -58,35 +68,54 @@ std::vector<T> span_to_vector(const std::span<T>& span) {
     return result;
 }
 
+inline bool operator==(const ENetAddress& first, const ENetAddress& second) {
+    return first.host == second.host && first.port == second.port;
+}
+
 struct PlayerAddress {
     PlayerAddress(const ENetAddress& address): host(address.host), port(address.port) {}
     PlayerAddress() = default;
 
     uint32_t host;
     uint16_t port;
+
+    bool operator==(const PlayerAddress& other) const {
+        return host == other.host && port == other.port;
+    }
 };
 
-struct Player {
-    Player() = default;
-    Player(InByteStream& istr) {
-        istr >> name >> address.host >> address.port >> id >> ping;
-    }
+struct LobbyPlayer {
+    std::string name;
+    PlayerAddress address;
+};
 
+inline OutByteStream& operator<<(OutByteStream& stream, const LobbyPlayer& player) {
+    return stream << player.name << player.address.host << player.address.port;
+}
+
+inline InByteStream& operator>>(InByteStream& stream, LobbyPlayer& player) {
+    return stream >> player.name >> player.address.host >> player.address.port;
+}
+
+struct Player : public LobbyPlayer {
     bool operator<(const Player& right) const {
         return id < right.id;
     }
 
-    std::string name;
-    PlayerAddress address;
     uint32_t id;
     uint32_t ping;
-
-    std::vector<std::byte> to_bytes() const {
-        OutByteStream ostr;
-        ostr << name << address.host << address.port << id << ping;
-        return span_to_vector(ostr.get_span());
-    }
 };
+
+inline OutByteStream& operator<<(OutByteStream& ostr, const Player& player) {
+    ostr << static_cast<const LobbyPlayer&>(player);
+    ostr << player.id << player.ping;
+    return ostr;
+}
+inline InByteStream& operator>>(InByteStream& istr, Player& player) {
+    istr >> static_cast<LobbyPlayer&>(player);
+    istr >> player.id >> player.ping;
+    return istr;
+}
 
 
 template<bool is_reliable>
@@ -117,5 +146,5 @@ inline GameObject interpolate(const GameObject& from, const GameObject& to, floa
 inline static const std::chrono::milliseconds s_client_frame_time = 20ms;
 inline static const std::chrono::milliseconds s_server_tick_time = 40ms;
 inline static const vec2 s_simulation_borders = {25, 25};
-inline static const uint16_t s_game_server_port = 7946;
+inline static const uint16_t s_matchmaking_server_port = 7946;
 

@@ -92,6 +92,16 @@ public:
             al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, "Connecting...");
             al_flip_display();
         } else {
+            if (state.interpolation_length > 0) {
+                float ratio = float(state.interpolation_progress) / float(state.interpolation_length);
+                local = interpolate(state.from_interpolation, state.my_object, ratio);
+                ++state.interpolation_progress;
+                if (state.interpolation_progress >= state.interpolation_length) {
+                    state.interpolation_length = 0;
+                }
+            } else {
+                local = state.my_object;
+            }
             al_clear_to_color(al_map_rgb(0, 0, 0));
             vec2 box_start = model_to_screen_coords({0, 0});
             vec2 box_end = model_to_screen_coords(s_simulation_borders);
@@ -120,8 +130,9 @@ public:
             {
                 // estimated client object
                 if (!state.objects.empty()) {
-                    auto screen_radius = state.my_object.radius * ratio;
-                    auto coords = model_to_screen_coords(state.my_object.position);
+                    
+                    auto screen_radius = local.radius * ratio;
+                    auto coords = model_to_screen_coords(local.position);
                     
                     al_draw_circle(coords.x, coords.y, screen_radius, 
                             al_map_rgb(255, 255, 255), 2
@@ -146,13 +157,13 @@ public:
 
 private:
     float model_to_screen_ratio() const {
-        float model_min_dim = state.my_object.radius * 8;
+        float model_min_dim = local.radius * 8;
         auto screen_min_dim = std::min(window_width, window_height);
         return float(screen_min_dim) / model_min_dim;
     }
 
     vec2 model_to_screen_coords(vec2 coords) const {
-        auto model_center = state.my_object.position;
+        auto model_center = local.position;
         auto screen_center = glm::vec2{window_width, window_height} / 2.0f;
         float ratio = model_to_screen_ratio();
         auto res = (coords - model_center) * ratio  + screen_center;
@@ -168,6 +179,7 @@ private:
     ALLEGRO_FONT* font;
 
     ClientState& state;
+    GameObject local;
 
     const int max_events_in_frame = 100;
 };

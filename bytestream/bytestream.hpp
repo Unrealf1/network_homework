@@ -25,7 +25,7 @@ public:
     }
 
     template<typename T>
-    void read(T& item) {
+    std::enable_if_t<std::is_trivially_copyable_v<T>, void> read(T& item) {
         decltype(m_buffer)::iterator::difference_type size = sizeof(item);
         if (size > std::distance(m_cursor, m_buffer.end())) {
             throw std::out_of_range("Not enough bytes to read");
@@ -43,6 +43,13 @@ public:
         }
         str = std::string(char_ptr, len);
         m_cursor += int64_t(len) + 1;
+    }
+
+    template<typename T>
+    T get() {
+        T res;
+        *this >> res;
+        return res;
     }
 
     template<typename T>

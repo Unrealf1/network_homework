@@ -30,11 +30,14 @@ int main() {
 
         state.tasks.launch();
 
-        std::string players_msg;
-        for (const auto& player : state.players) {
-            players_msg += fmt::format("\n{} ({})", player.name, player.ping);
+        {
+            std::string players_msg;
+            for (const auto& player : state.players) {
+                players_msg += fmt::format("\n{} ({})", player.name, player.ping);
+            }
+            spdlog::info(players_msg);
         }
-        spdlog::info(players_msg);
+
         if (!state.nosleep) {
             std::this_thread::sleep_until(frame_end_time);
         }

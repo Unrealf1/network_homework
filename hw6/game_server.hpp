@@ -13,11 +13,11 @@
 
 #include <enet/enet.h>
 #include <spdlog/spdlog.h>
-#include <nlohmann/json.hpp>
 
 #include "common.hpp"
 #include "glm/geometric.hpp"
 #include "timed_task_manager.hpp"
+#include "base_server.hpp"
 
 using namespace std::chrono_literals;
 
@@ -26,15 +26,23 @@ struct Robot {
     uint32_t object_id;
 };
 
-class GameServer {
+class GameServer: public BaseServer<GameServer> {
     using players_t = std::vector<Player>;
     using objects_t = std::vector<GameObject>;
     using game_clock_t = std::chrono::steady_clock;
 
 public:
-    GameServer(ENetHost* host);
+    GameServer(ENetHost* host, const std::string& name, uint32_t id);
 
-    void run();
+    //void run();
+    void on_start();
+    void on_finish();
+    void update();
+    void process_new_connection(ENetEvent&);
+    void process_data(ENetEvent&);
+    void process_disconnect(ENetEvent&);
+
+
 
     static void object_physics(GameObject& object, float dt);
 
@@ -57,13 +65,14 @@ public:
         }
     }
 
+    static constexpr std::chrono::milliseconds s_update_time = 40ms;
 private:
     size_t m_last_num_players = 0;
+    std::string m_name;
+    uint32_t m_id;
+
     void update_screen();
 
-    void process_new_connection(ENetEvent&);
-    void process_data(ENetEvent&);
-    void process_disconnect(ENetEvent&);
 
     void update_physics(float dt);
 
@@ -94,7 +103,7 @@ private:
 
     void broadcast_new_player(const Player& player) {
         OutByteStream ostr;
-        ostr << MessageType::list_update << player.to_bytes();
+        ostr << MessageType::list_update << player;
         return broadcast_message<true>(ostr.get_span());
     }
 

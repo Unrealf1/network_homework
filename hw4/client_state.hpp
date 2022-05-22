@@ -21,6 +21,9 @@ struct ClientState {
     std::vector<GameObject> objects;
     std::vector<Player> players;
     GameObject my_object;
+    GameObject from_interpolation;
+    uint32_t interpolation_progress;
+    uint32_t interpolation_length;
     std::deque<Snapshot> snapshots;
     Snapshot last_snapshot;
     uint32_t snapshot_progress = 0;

@@ -68,11 +68,6 @@ private:
         GameServer::object_borders(object);
     }
 
-    template<typename T>
-    T interpolate(const T& from, const T& to, float ratio) {
-        return from + (to - from) * ratio;
-    }
-
     void check_reset() {
         const auto& snapshot = state.last_snapshot;
         auto iter = std::find_if(
@@ -84,7 +79,7 @@ private:
             spdlog::error("cannot find my object in snapshot");
         } else {
             GameObject snapshot_object = *(iter);
-            if (glm::distance(snapshot_object.position, snapshot.my_object.position) > 0.1f) {
+            if (snapshot_object.radius != snapshot.my_object.radius || glm::distance(snapshot_object.position, snapshot.my_object.position) > 0.1f) {
                 //TODO: reset
                 spdlog::warn("resetting physics");
                 GameObject new_estimation = snapshot_object;
@@ -92,8 +87,10 @@ private:
                 for (const Snapshot& snap : state.snapshots) {
                     process_object(new_estimation, snap.direction, float(s_server_tick_time.count()) / 1000.0f);
                 }
-
+                state.from_interpolation = state.my_object;
                 state.my_object = new_estimation;
+                state.interpolation_progress = 0;
+                state.interpolation_length = 100 / s_client_frame_time.count();
             }
         }
     }

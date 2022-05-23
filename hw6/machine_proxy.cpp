@@ -66,7 +66,7 @@ private:
     void launch_server_process(const std::vector<Mod>& mods, const std::string& name) {
         server_threads.emplace_back([=]{
             std::stringstream command;
-            command << s_server_executable << ' ' << next_port++ << ' ' <<  name;
+            command << s_server_executable << ' ' << next_port++ << ' ' << '"' <<  name << '"';
             for (const auto& mod : mods) {
                 command << ' ' << mod.to_str();
             }

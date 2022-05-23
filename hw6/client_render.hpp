@@ -111,15 +111,19 @@ public:
             al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, "In matchmaking...");
             for (size_t i = 0; i < state.lobbies.size(); ++i) {
                 uint8_t blue = state.chosen_lobby == i ? 255 : 100;
-                al_draw_text(font, al_map_rgb(255, 200, blue), 0, float(i + 1) * 20.0f, 0, (std::to_string(i + 1) + ".").c_str());
-                al_draw_text(font, al_map_rgb(255, 200, blue), 10.0f, float(i + 1) * 20.0f, 0, state.lobbies[i].name.c_str());
-                al_draw_text(font, al_map_rgb(255, 200, blue), 150.0f, float(i + 1) * 20.0f, 0, state.lobbies[i].description.c_str());
-                al_draw_text(font, al_map_rgb(255, 200, blue), 350.0f, float(i + 1) * 20.0f, 0, fmt::format("{} / {}", state.lobbies[i].players.size(), state.lobbies[i].max_players).c_str());
+                uint8_t red = 255; //state.lobbies[i].state == LobbyState::playing ? 200 : 255;
+                al_draw_text(font, al_map_rgb(red, 200, blue), 0, float(i + 1) * 20.0f, 0, (std::to_string(i + 1) + ".").c_str());
+                al_draw_text(font, al_map_rgb(red, 200, blue), 10.0f, float(i + 1) * 20.0f, 0, state.lobbies[i].name.c_str());
+                al_draw_text(font, al_map_rgb(red, 200, blue), 150.0f, float(i + 1) * 20.0f, 0, state.lobbies[i].description.c_str());
+                al_draw_text(font, al_map_rgb(red, 200, blue), 350.0f, float(i + 1) * 20.0f, 0, fmt::format("{} / {}", state.lobbies[i].players.size(), state.lobbies[i].max_players).c_str());
+                if (state.lobbies[i].state == LobbyState::playing) {
+                    al_draw_text(font, al_map_rgb(red, 200, blue), 400.0f, float(i + 1) * 20.0f, 0, "[playing]");
+                }
             }
             al_flip_display();
         } else if (state.mode == ClientMode::in_lobby) {
             al_clear_to_color(al_map_rgb(0, 0, 0));
-            al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, "In lobby...");
+            al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, fmt::format("In lobby \"{}\"", state.lobbies[state.chosen_lobby].name).c_str());
             auto& players = state.lobbies[state.chosen_lobby].players;
             for (size_t i = 0; i < players.size(); ++i) {
                 uint8_t blue = 150;

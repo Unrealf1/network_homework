@@ -21,7 +21,7 @@ public:
 private:
     std::vector<server_lobby_t> m_lobbies;
     std::vector<ServerProvider> m_providers;
-    std::unordered_set<std::string_view> m_pending_games;
+    std::unordered_set<std::string> m_pending_games;
   
     void make_game_server(const server_lobby_t& lobby);
     void launch_lobby(server_lobby_t& lobby, const GameServerInfo& server);

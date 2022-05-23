@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bits/ranges_algo.h>
 #include <iterator>
+#include <sstream>
 #include <stdexcept>
 #include <thread>
 
@@ -10,7 +11,7 @@
 
 
 void MatchMakingServer::process_new_connection(ENetEvent& event) {
-    spdlog::info("new client connected (port: {})", event.peer->address.port);
+    spdlog::info("new connection (port: {})", event.peer->address.port);
 }
 
 void MatchMakingServer::process_data(ENetEvent& event) {
@@ -47,12 +48,15 @@ void MatchMakingServer::process_data(ENetEvent& event) {
         if (m_lobbies[index].max_players == m_lobbies[index].players.size()) {
             return;
         }
-        spdlog::info("connection player to the lobby {}", index);
+        if (m_lobbies[index].state == LobbyState::playing) {
+            return;
+        }
+        spdlog::info("connecting player to the lobby {}", index);
         OutByteStream msg;
         msg << MessageType::lobby_join << index;
         send_bytes<true>(msg.get_span(), event.peer);
         m_lobbies[index].players.emplace_back(istr.get<std::string>(), event.peer, false);
-        spdlog::info("not lobby has {} players", m_lobbies[index].players.size());
+        spdlog::info("now lobby has {} players", m_lobbies[index].players.size());
     } else if (type == MessageType::lobby_start) {
         auto index = istr.get<size_t>();
         start_lobby(m_lobbies[index]); 
@@ -61,8 +65,12 @@ void MatchMakingServer::process_data(ENetEvent& event) {
         m_providers.emplace_back(event.peer);
     } else if (type == MessageType::server_ready) {
         auto lobby_name = istr.get<std::string>();
-        spdlog::info("server for lobby {} is ready", lobby_name);
+        spdlog::info("server for lobby \"{}\" is ready", lobby_name);
         if (!m_pending_games.contains(lobby_name)) {
+            spdlog::warn("server was created, but game is not pending");
+            std::stringstream debug;
+            std::ranges::copy(m_pending_games, std::ostream_iterator<std::string>(debug, "\n"));
+            spdlog::info("Pending games: {}", debug.str());
             return;
         }
         GameServerInfo info;
@@ -81,7 +89,6 @@ void MatchMakingServer::process_data(ENetEvent& event) {
             }
         }
     } else if (type == MessageType::player_ready) {
-        spdlog::info("player ready");
         for (auto& lobby : m_lobbies) {
             auto it = std::ranges::find_if(lobby.players, [&event](const auto& player) {return player.peer->address == event.peer->address;});  
             if (it != lobby.players.end()) {
@@ -129,6 +136,8 @@ void MatchMakingServer::send_lobby_list(ENetPeer* to) {
 }
 
 void MatchMakingServer::start_lobby(server_lobby_t& lobby) {
+    spdlog::info("starting loby {}", lobby.name);
+    m_pending_games.insert(lobby.name);
     m_task_manager.add_task([this, provider = m_providers.begin(), lobby]() mutable -> bool {
         spdlog::info("attempt {} to create a server for lobby {}", provider - m_providers.begin(), lobby.name);
 
@@ -144,8 +153,7 @@ void MatchMakingServer::start_lobby(server_lobby_t& lobby) {
         } else {
             return false;
         }
-    }, 5s);
-    m_pending_games.insert(lobby.name);
+    }, 5s, 0ms);
 }
 
 void MatchMakingServer::launch_lobby(server_lobby_t& lobby, const GameServerInfo& server) {

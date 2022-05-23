@@ -38,7 +38,7 @@ public:
         }
 
         if (state.snapshots.empty()) {
-            spdlog::error("no snapshots available after snapshot update");
+            spdlog::warn("no snapshots available after snapshot update");
             return;
             // wait
         } 
@@ -83,7 +83,6 @@ private:
         } else {
             GameObject snapshot_object = *(iter);
             if (snapshot_object.radius != snapshot.my_object.radius || glm::distance(snapshot_object.position, snapshot.my_object.position) > 0.1f) {
-                //TODO: reset
                 spdlog::warn("resetting physics");
                 GameObject new_estimation = snapshot_object;
 

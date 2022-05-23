@@ -44,7 +44,6 @@ void GameServer::process_new_connection(ENetEvent& event) {
 void GameServer::process_data(ENetEvent& event) {
     InByteStream istr(event.packet->data, event.packet->dataLength);
     MessageType type;
-    spdlog::info("data");
     istr >> type;
     if (type == MessageType::game_update) {
         spdlog::error("game updates from clients are deprecated");
@@ -62,7 +61,6 @@ void GameServer::process_data(ENetEvent& event) {
 
         object->position = position;
     } else if (type == MessageType::input) {
-        spdlog::info("input");
         vec2 direction;
         istr >> direction;
         direction = glm::normalize(direction);

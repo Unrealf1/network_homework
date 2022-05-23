@@ -20,10 +20,23 @@ void MatchMakingServer::process_data(ENetEvent& event) {
     if (type == MessageType::lobby_list_update) {
         send_lobby_list(event.peer);
     } else if (type == MessageType::lobby_create) {
-        auto new_lobby = istr.get<server_lobby_t>();
+        auto client_lobby = istr.get<client_lobby_t>();
+        auto new_lobby = server_lobby_t {
+            .name = client_lobby.name,
+            .description = client_lobby.description,
+            .mods = client_lobby.mods,
+            .players = {},
+            .max_players = client_lobby.max_players,
+            .max_mmr = client_lobby.max_mmr,
+            .min_mmr = client_lobby.min_mmr,
+            .avg_mmr = client_lobby.avg_mmr,
+            .state = client_lobby.state
+        };
         if (std::ranges::find_if(m_lobbies, [&](const auto& lobby) {return lobby.name == new_lobby.name;}) != m_lobbies.end()) {
+            spdlog::warn("failed to create lobby with name {}, as this name is already taken", new_lobby.name);
             return;
         }
+        spdlog::info("creating lobby {}", new_lobby.name);
         m_lobbies.push_back(std::move(new_lobby));
         spdlog::info("created new lobby with name: \"{}\"", m_lobbies.back().name);
     } else if (type == MessageType::lobby_join) {
@@ -38,14 +51,17 @@ void MatchMakingServer::process_data(ENetEvent& event) {
         OutByteStream msg;
         msg << MessageType::lobby_join << index;
         send_bytes<true>(msg.get_span(), event.peer);
-        m_lobbies[index].players.emplace_back(istr.get<std::string>(), event.peer);
+        m_lobbies[index].players.emplace_back(istr.get<std::string>(), event.peer, false);
+        spdlog::info("not lobby has {} players", m_lobbies[index].players.size());
     } else if (type == MessageType::lobby_start) {
         auto index = istr.get<size_t>();
         start_lobby(m_lobbies[index]); 
     } else if (type == MessageType::register_provider) {
+        spdlog::info("registered new server provider on port {}", event.peer->address.port);
         m_providers.emplace_back(event.peer);
     } else if (type == MessageType::server_ready) {
         auto lobby_name = istr.get<std::string>();
+        spdlog::info("server for lobby {} is ready", lobby_name);
         if (!m_pending_games.contains(lobby_name)) {
             return;
         }
@@ -56,11 +72,29 @@ void MatchMakingServer::process_data(ENetEvent& event) {
             throw std::runtime_error("can't find lobby to launch the game");
         }
         launch_lobby(*lobby, info);
+    } else if (type == MessageType::set_name) {
+        auto name = istr.get<std::string>();
+        for (auto& lobby : m_lobbies) {
+            auto it = std::ranges::find_if(lobby.players, [&event](const auto& player) {return player.peer->address == event.peer->address;});  
+            if (it != lobby.players.end()) {
+                it->name = name;
+            }
+        }
+    } else if (type == MessageType::player_ready) {
+        spdlog::info("player ready");
+        for (auto& lobby : m_lobbies) {
+            auto it = std::ranges::find_if(lobby.players, [&event](const auto& player) {return player.peer->address == event.peer->address;});  
+            if (it != lobby.players.end()) {
+                it->ready = !it->ready;
+                spdlog::info("changing ready for player {} in lobby {}, now {}", it->name, lobby.name, it->ready);
+            }
+        }
     }
 }
 
 
 void MatchMakingServer::process_disconnect(ENetEvent& event) {
+    spdlog::info("client disconnected (port: {})", event.peer->address.port);
     for (auto& lobby : m_lobbies) {
         auto it = std::ranges::find_if(lobby.players, [&event](const auto& player) {return player.peer->address == event.peer->address;});  
         if (it != lobby.players.end()) {
@@ -86,7 +120,7 @@ void MatchMakingServer::send_lobby_list(ENetPeer* to) {
         };
         client_lobby.players.reserve(lobby.players.size());
         std::ranges::transform(lobby.players, std::back_inserter(client_lobby.players), [](const InnerLobbyPlayer& server_player) -> LobbyPlayer {
-            return {server_player.name, server_player.peer->address};
+            return {server_player.name, server_player.peer->address, server_player.ready};
         });
         ostr << client_lobby;
     } 
@@ -96,18 +130,21 @@ void MatchMakingServer::send_lobby_list(ENetPeer* to) {
 
 void MatchMakingServer::start_lobby(server_lobby_t& lobby) {
     m_task_manager.add_task([this, provider = m_providers.begin(), lobby]() mutable -> bool {
-        if (provider == m_providers.end()) {
-            throw std::runtime_error("could not create game server");
-        }
+        spdlog::info("attempt {} to create a server for lobby {}", provider - m_providers.begin(), lobby.name);
 
         if (m_pending_games.contains(lobby.name)) {
+            if (provider == m_providers.end()) {
+                //throw std::runtime_error("could not create game server");
+                return false;
+            }
+
             provider->request_server(lobby.mods, lobby.name);
             ++provider;
             return true;
         } else {
             return false;
         }
-    }, 1000ms);
+    }, 5s);
     m_pending_games.insert(lobby.name);
 }
 
@@ -116,8 +153,24 @@ void MatchMakingServer::launch_lobby(server_lobby_t& lobby, const GameServerInfo
     OutByteStream msg;
     msg << MessageType::lobby_start << server;
     for (auto& player : lobby.players) {
-        send_bytes<true>(msg.get_span(), player.peer);
+        spdlog::info("lanching client on port {}", player.peer->address.port);
+        while (send_bytes<true>(msg.get_span(), player.peer) != 0) {
+
+        }
     }
     m_pending_games.erase(lobby.name);
+    spdlog::info("launched lobby {}", lobby.name);
+}
+
+void MatchMakingServer::on_start() {
+    m_task_manager.add_task([this] {
+        for (auto& lobby : m_lobbies) {
+            if (lobby.players.size() > 0 && std::ranges::all_of(lobby.players, [](const auto& player){return player.ready;}) 
+                    && !m_pending_games.contains(lobby.name) && lobby.state != LobbyState::playing) {
+                start_lobby(lobby);
+            }
+        }
+        return true;
+    }, 1s);
 }
 

@@ -47,7 +47,6 @@ public:
     BaseServer(ENetHost* host): m_host(host) {}
 
     void run() {
-        spdlog::info("starting matchmaking server");
         auto& self = get_self();
         self.on_start();
         while (m_alive) {

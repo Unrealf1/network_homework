@@ -18,6 +18,14 @@ public:
             enet_address_set_host(&address, "localhost");
             address.port = s_matchmaking_server_port;
             matchmaking = enet_host_connect(m_host, &address, 2, 0);
+            return;
+        }
+        if (!registered) {
+            OutByteStream msg;
+            msg << MessageType::register_provider;
+            if (send_bytes<true>(msg.get_span(), matchmaking) == 0) {
+                registered = true;
+            } 
         }
     }
     void on_start() {}
@@ -43,6 +51,7 @@ public:
     void process_disconnect(ENetEvent& event) {
         if (event.peer->address == matchmaking->address) {
             matchmaking = nullptr;
+            registered = false;
         }
     }
 
@@ -50,6 +59,7 @@ private:
     ENetPeer* matchmaking = nullptr;
     std::vector<std::jthread> server_threads;
     uint16_t next_port;
+    bool registered = false;
 
     static constexpr const char* s_server_executable = "./build/hw6/server6";
 
@@ -60,6 +70,7 @@ private:
             for (const auto& mod : mods) {
                 command << ' ' << mod.to_str();
             }
+            spdlog::info("creating server with command {}", command.str());
             std::system(command.str().c_str());        
         });
     }

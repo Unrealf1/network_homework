@@ -17,7 +17,7 @@ struct Snapshot {
 };
 
 enum class ClientMode {
-    matchmaking, in_lobby, connected
+    matchmaking, in_lobby, connected, connecting
 };
 
 struct ClientState {
@@ -30,7 +30,8 @@ struct ClientState {
     size_t chosen_lobby;
     bool should_connect = false;
     bool should_create = false;
-    server_lobby_t lobby_creation = {};
+    bool send_ready = false;
+    client_lobby_t lobby_creation = {};
     GameObject my_object;
     GameObject from_interpolation;
     uint32_t interpolation_progress;

@@ -23,6 +23,7 @@ struct Mod {
 struct InnerLobbyPlayer {
     std::string name;
     ENetPeer* peer;
+    bool ready;
 };
 
 enum class LobbyState : uint8_t {
@@ -46,10 +47,10 @@ using server_lobby_t = Lobby<InnerLobbyPlayer>;
 
 template<typename player_t>
 inline OutByteStream& operator<<(OutByteStream& ostr, const Lobby<player_t>& lobby) {
-    ostr << lobby.name << lobby.description << lobby.mods.size();
-    for (const auto& mod : lobby.mods) {
+    ostr << lobby.name << lobby.description << lobby.mods << lobby.players;
+    /*for (const auto& mod : lobby.mods) {
         ostr << mod;
-    }
+    }*/
     return ostr << lobby.max_players 
         << lobby.max_mmr << lobby.min_mmr 
         << lobby.avg_mmr << lobby.state;
@@ -57,14 +58,14 @@ inline OutByteStream& operator<<(OutByteStream& ostr, const Lobby<player_t>& lob
 
 template<typename player_t>
 inline InByteStream& operator>>(InByteStream& istr, Lobby<player_t>& lobby) {
-    istr >> lobby.name >> lobby.description;
+    istr >> lobby.name >> lobby.description >> lobby.mods >> lobby.players;
 
-    size_t mods_size;
+    /*size_t mods_size;
     istr >> mods_size;
     lobby.mods.reserve(mods_size);
     for (size_t i = 0; i < mods_size; ++i) {
         lobby.mods.push_back(istr.get<Mod>());
-    }
+    }*/
 
     return istr >> lobby.max_players >> lobby.max_mmr >> lobby.min_mmr >> lobby.avg_mmr >> lobby.state;
 }

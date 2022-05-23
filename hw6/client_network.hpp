@@ -1,8 +1,12 @@
 #pragma once
 
 #include <algorithm>
+#include <iterator>
+#include <sstream>
+#include <string>
 #include <tuple>
 #include <iostream>
+#include <ranges>
 
 #include <enet/enet.h>
 
@@ -10,18 +14,22 @@
 #include "spdlog/spdlog.h"
 
 
+static ENetPeer* connect_to_matchmaking(ENetHost* host) {
+    ENetAddress address;
+    enet_address_set_host(&address, "localhost");
+    address.port = s_matchmaking_server_port;
+    return enet_host_connect(host, &address, 2, 0);
+}
+
 static std::pair<ENetHost*, ENetPeer*> setup_enet() {
     ENetHost* client = enet_host_create(nullptr, 2, 2, 0, 0);
     if (client == nullptr) {
         spdlog::error("could node create enet client");
         exit(1);
     }
-    
-    ENetAddress address;
-    enet_address_set_host(&address, "localhost");
-    address.port = s_matchmaking_server_port;
 
-    ENetPeer* server = enet_host_connect(client, &address, 2, 0);
+    auto server = connect_to_matchmaking(client);
+    
     if (server == nullptr) {
         spdlog::error("Cannot connect to the matchmaking server");
         exit(2);
@@ -39,7 +47,8 @@ public:
             ask_for_lobby_update();
             return true;
         }, 1s);
-
+        
+        // Ways to exit lobby screen
         state.tasks.add_task([this] {
             auto& state = this->state;
             if (state.mode != ClientMode::matchmaking) {
@@ -58,15 +67,22 @@ public:
                 spdlog::info("requesting lobby creation");
                 OutByteStream msg;
                 std::cout << "Please enter lobby name\n";
-                std::cin >> state.lobby_creation.name;
-                std::cout << "Enter lobby description\n";
-                std::cin >> state.lobby_creation.description;
+                std::getline(std::cin, state.lobby_creation.name);
+                state.lobby_creation.description = fmt::format("{}'s lobby", state.name);
+                if (matchmaking->state != ENET_PEER_STATE_CONNECTED) {
+                    matchmaking = connect_to_matchmaking(client);
+                }
                 state.lobby_creation.max_players = 16;
                 msg << MessageType::lobby_create << state.lobby_creation;
                 send_bytes<true>(msg.get_span(), matchmaking);
             }
             return true;
         }, 50ms);
+
+        state.tasks.add_task([this] {
+            lobby_controls();
+            return true;
+        }, 100ms);
     }
     ~Network() {
         enet_host_destroy(client);
@@ -92,6 +108,7 @@ private:
     ENetPeer* server = nullptr;
     ENetPeer* matchmaking;
     ClientState& state;
+    ENetAddress server_address;
 
     Snapshot parse_snapshot(InByteStream& istr) {
         uint32_t num_objects;
@@ -104,6 +121,18 @@ private:
             objects.push_back(std::move(obj));
         }
         return {objects, state.my_object, state.direction, game_clock_t::now()};
+    }
+
+    void lobby_controls() {
+        if (state.mode != ClientMode::in_lobby) {
+            return;
+        }
+        if (state.send_ready) {
+            state.send_ready = false;
+            OutByteStream msg;
+            msg << MessageType::player_ready;
+            send_bytes<true>(msg.get_span(), matchmaking);
+        }
     }
 
     void process_snapshot(InByteStream& istr) {
@@ -150,6 +179,10 @@ private:
         state.lobbies.reserve(sz);
         for (size_t i = 0; i < sz; ++i) {
             state.lobbies.push_back(istr.get<client_lobby_t>());
+            std::stringstream debug;
+            debug << state.lobbies.back().name << ":\n";
+            std::ranges::copy(state.lobbies[i].players | std::views::transform([](const auto& player) {return player.name;}), std::ostream_iterator<std::string>(debug));
+            //spdlog::warn("{}", debug.str());
         }
     }
 
@@ -169,6 +202,34 @@ private:
             process_lobby_list_update(istr);
         } else if (type == MessageType::lobby_join) {
             state.mode = ClientMode::in_lobby;
+        } else if (type == MessageType::lobby_start) {
+            connect_to_game_server(istr);
+        }
+    }
+
+    void connect_to_game_server(InByteStream& istr) {
+        spdlog::info("Starting connection process...");
+        state.mode = ClientMode::connecting;
+        auto server_info = istr.get<GameServerInfo>();
+        server_address = server_info.address;
+        state.tasks.add_task([this]{
+            server_connection();
+            return state.mode != ClientMode::connected;
+        }, 10ms);
+    }
+
+    void server_connection() {
+        if (state.mode == ClientMode::connecting) {
+            if (server != nullptr) {
+                OutByteStream msg;
+                msg << MessageType::register_player << state.name;
+                if (send_bytes<true>(msg.get_span(), server)) {
+                    state.mode = ClientMode::connected;
+                }
+                spdlog::info("registering at game server");
+            } else {
+                server = enet_host_connect(client, &server_address, 2, 0);
+            }
         }
     }
 

@@ -56,7 +56,8 @@ enum class MessageType: uint8_t {
     game_update, ping, list_update, 
     register_player, reset, input, 
     lobby_list_update, lobby_start, lobby_create, 
-    lobby_join, register_provider, server_ready
+    lobby_join, register_provider, server_ready,
+    set_name, player_ready
     
 };
 
@@ -87,14 +88,15 @@ struct PlayerAddress {
 struct LobbyPlayer {
     std::string name;
     PlayerAddress address;
+    bool ready;
 };
 
 inline OutByteStream& operator<<(OutByteStream& stream, const LobbyPlayer& player) {
-    return stream << player.name << player.address.host << player.address.port;
+    return stream << player.name << player.address.host << player.address.port << player.ready;
 }
 
 inline InByteStream& operator>>(InByteStream& stream, LobbyPlayer& player) {
-    return stream >> player.name >> player.address.host >> player.address.port;
+    return stream >> player.name >> player.address.host >> player.address.port >> player.ready;
 }
 
 struct Player : public LobbyPlayer {
@@ -119,12 +121,12 @@ inline InByteStream& operator>>(InByteStream& istr, Player& player) {
 
 
 template<bool is_reliable>
-inline void send_bytes(const std::span<std::byte>& bytes, ENetPeer* where) {
+inline int send_bytes(const std::span<std::byte>& bytes, ENetPeer* where) {
     const auto reliability_flag = is_reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED;
     const auto channel_number = is_reliable ? 0 : 1;
     auto packet = enet_packet_create(bytes.data(), bytes.size(), reliability_flag); //TODO: add NO_ALLOC after debug
 
-    enet_peer_send(where, channel_number, packet);
+    return enet_peer_send(where, channel_number, packet);
 
     // enet_packet_destroy(packet);
 }

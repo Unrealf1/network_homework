@@ -3,6 +3,7 @@
 #include <chrono>
 #include <functional>
 #include <list>
+#include <iostream>
 
 
 using namespace std::chrono_literals;
@@ -24,10 +25,14 @@ public:
             );
             if (since_last_execution > task.execution_period) {
                 if (!task.task()) {
-                   //auto copy = it;
-                   //--copy;
+                   auto copy = it;
+                   --copy;
+                   std::cout << "before erase "<< m_tasks.size() << '\n';
                    m_tasks.erase(it);
-                   //it = copy;
+                   std::cout << "after erase "<< m_tasks.size() << '\n';
+                   it = copy;
+                } else {
+                   task.last_execution = current_time;
                 }
                 ++tasks_launched;
             }          

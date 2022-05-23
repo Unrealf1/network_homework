@@ -55,7 +55,26 @@ public:
                 if (key == ALLEGRO_KEY_ESCAPE) {
                     state.alive = false;
                 }
+                if (state.mode == ClientMode::matchmaking) {
+                    if (key == ALLEGRO_KEY_DOWN) {
+                        state.chosen_lobby = std::min(state.chosen_lobby + 1, state.lobbies.size() - 1);
+                    } 
+                    if (key == ALLEGRO_KEY_UP) {
+                        state.chosen_lobby = std::min(state.chosen_lobby - 1, size_t(0));
+                    }
+                    if (key == ALLEGRO_KEY_ENTER) {
+                        state.should_connect = true;
+                    }
+                    if (key == ALLEGRO_KEY_SPACE) {
+                        state.should_create = true;
+                    }
+                } else if (state.mode == ClientMode::in_lobby) {
+                    if (key == ALLEGRO_KEY_ENTER) {
+                        state.send_ready = true;
+                    }
+                }
             }
+
         }
 
         if (processed_allegro_events == 0) {
@@ -83,21 +102,6 @@ public:
             }
             direction = glm::length(direction) > 0.5f ? glm::normalize(direction) : vec2{0, 0};
             state.direction = direction;
-        } else if (state.mode == ClientMode::matchmaking) {
-            ALLEGRO_KEYBOARD_STATE keyboard_state;
-            al_get_keyboard_state(&keyboard_state);
-            if (al_key_down(&keyboard_state, ALLEGRO_KEY_DOWN)) {
-                state.chosen_lobby = std::min(state.chosen_lobby + 1, state.lobbies.size() - 1);
-            } 
-            if (al_key_down(&keyboard_state, ALLEGRO_KEY_UP)) {
-                state.chosen_lobby = std::min(state.chosen_lobby - 1, size_t(0));
-            }
-            if (al_key_down(&keyboard_state, ALLEGRO_KEY_ENTER)) {
-                state.should_connect = true;
-            }
-            if (al_key_down(&keyboard_state, ALLEGRO_KEY_SPACE)) {
-                state.should_create = true;
-            }
         }
     }
 
@@ -109,8 +113,8 @@ public:
                 uint8_t blue = state.chosen_lobby == i ? 255 : 100;
                 al_draw_text(font, al_map_rgb(255, 200, blue), 0, float(i + 1) * 20.0f, 0, (std::to_string(i + 1) + ".").c_str());
                 al_draw_text(font, al_map_rgb(255, 200, blue), 10.0f, float(i + 1) * 20.0f, 0, state.lobbies[i].name.c_str());
-                al_draw_text(font, al_map_rgb(255, 200, blue), 110.0f, float(i + 1) * 20.0f, 0, state.lobbies[i].description.c_str());
-                al_draw_text(font, al_map_rgb(255, 200, blue), 200.0f, float(i + 1) * 20.0f, 0, fmt::format("{} / {}", state.lobbies[i].players.size(), state.lobbies[i].max_players).c_str());
+                al_draw_text(font, al_map_rgb(255, 200, blue), 150.0f, float(i + 1) * 20.0f, 0, state.lobbies[i].description.c_str());
+                al_draw_text(font, al_map_rgb(255, 200, blue), 350.0f, float(i + 1) * 20.0f, 0, fmt::format("{} / {}", state.lobbies[i].players.size(), state.lobbies[i].max_players).c_str());
             }
             al_flip_display();
         } else if (state.mode == ClientMode::in_lobby) {
@@ -121,6 +125,7 @@ public:
                 uint8_t blue = 150;
                 al_draw_text(font, al_map_rgb(255, 200, blue), 0, float(i + 1) * 20.0f, 0, (std::to_string(i + 1) + ".").c_str());
                 al_draw_text(font, al_map_rgb(255, 200, blue), 10.0f, float(i + 1) * 20.0f, 0, players[i].name.c_str());
+                al_draw_text(font, al_map_rgb(255, 200, blue), 150.0f, float(i + 1) * 20.0f, 0, players[i].ready ? "READY" : "NOT READY");
             }
             al_flip_display();
         } else {

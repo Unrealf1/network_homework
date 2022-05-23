@@ -12,6 +12,7 @@ public:
     ServerProvider(ENetPeer* peer): proxy(peer) {}
 
     void request_server(const std::vector<Mod>& mods, const std::string& name) {
+        spdlog::info("asking port {} for a new server", proxy->address.port);
         OutByteStream msg;
         msg << MessageType::lobby_start << name << mods.size();
         for (const auto& mod : mods) {

@@ -1,3 +1,4 @@
+#include <string>
 #include <thread>
 
 #include <spdlog/spdlog.h>
@@ -14,6 +15,9 @@ int main() {
     Render renderer(state);
     Network network(state);
     Physics physics(state);
+
+    std::cout << "Enter your name:\n";
+    std::getline(std::cin, state.name);
     
     spdlog::info("starting main loop");
     while(state.alive) {

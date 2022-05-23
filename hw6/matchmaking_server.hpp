@@ -27,7 +27,7 @@ private:
     void launch_lobby(server_lobby_t& lobby, const GameServerInfo& server);
 public:
     void update() {}
-    void on_start() {}
+    void on_start(); 
     void on_finish() {}
     void process_new_connection(ENetEvent&);
     void process_data(ENetEvent&);

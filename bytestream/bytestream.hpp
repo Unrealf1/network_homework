@@ -9,6 +9,23 @@
 #include <vector>
 
 
+class InByteStream;
+class OutByteStream;
+
+template<typename T>
+concept serializable = requires (T value, InByteStream istr, OutByteStream ostr) {
+    {istr >> value};
+    {ostr << value};
+};
+
+template<typename T>
+concept serializable_container = requires (T container, decltype(*std::declval<T>().begin()) item) {
+    {*container.begin()} -> serializable;
+    {container.size()} -> std::same_as<size_t>;
+    {container.reserve(size_t(0))};
+    {container.push_back(item)};
+};
+
 class InByteStream {
 public:
     template<typename T>
@@ -34,6 +51,17 @@ public:
         memcpy(&item, &(*m_cursor), sizeof(item));
         m_cursor += size;
     }
+
+    template <serializable_container Container>
+    void read(Container& item) {
+        using value_t = std::remove_reference_t<decltype(*item.begin())>;
+        auto size = get<size_t>();
+        item.reserve(size);
+        for (size_t i = 0; i < size; ++i) {
+            item.push_back(get<value_t>());
+        }
+    }
+
 
     void read(std::string& str) {
         auto char_ptr = reinterpret_cast<char*>(&(*m_cursor));
@@ -102,6 +130,14 @@ public:
     void write(const std::vector<std::byte>& vector) {
         const std::span<const std::byte> span(vector.begin(), vector.end());
         write(span);
+    }
+
+    template<serializable_container Container>
+    void write(const Container& container) {
+        write(container.size());
+        for (size_t i = 0; i < container.size(); ++i) {
+            *this << container[i];
+        }
     }
 
     template<typename T>

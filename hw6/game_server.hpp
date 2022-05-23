@@ -69,14 +69,14 @@ public:
 private:
     size_t m_last_num_players = 0;
     std::string m_name;
-    uint32_t m_id;
+    uint64_t m_id;
 
     void update_screen();
 
 
     void update_physics(float dt);
 
-    Player create_player(const ENetAddress& address);
+    Player create_player(const ENetAddress& address, const std::string& name);
 
     GameObject create_game_object() {
         GameObject obj = {
@@ -237,6 +237,7 @@ private:
     typename game_clock_t::time_point m_start_time;   
     float m_dt = float(s_server_tick_time.count()) / 1000.0f;
     bool m_connected = false;
+    ENetPeer* matchmaking = nullptr;
 
     inline static const std::array s_nicknames = {
         "Rames Janor", "Nova", "Deckard Cain", "Dark Wanderer",

@@ -32,34 +32,11 @@ GameServer::GameServer(ENetHost* host, const std::string& name, uint32_t id)
         return true;
     }, 10s);
 
-    spdlog::set_level(spdlog::level::warn);
+    spdlog::set_level(spdlog::level::info);
 }
 
 
 void GameServer::process_new_connection(ENetEvent& event) {
-    auto player = create_player(event.peer->address);
-    spdlog::info("added player {}", player.name);
-    broadcast_new_player(player);
-    
-    auto new_object = create_game_object();
-    m_game_objects.push_back(new_object);
-    m_player_to_object.insert({player.id, new_object.id});
-
-    OutByteStream register_message;
-    register_message << MessageType::register_player;
-    register_message << player.id << new_object.id;
-    write_objects(register_message);
-    send_bytes<true>(register_message.get_span(), event.peer);
-
-    for (const auto& old_player : m_players) {
-        OutByteStream out;
-        out << MessageType::list_update << old_player;
-        send_bytes<true>(out.get_span(), event.peer);
-    }
-    
-    event.peer->data = new uint32_t(player.id);
-
-    add_player(player);
 }
 
 void GameServer::process_data(ENetEvent& event) {
@@ -98,6 +75,32 @@ void GameServer::process_data(ENetEvent& event) {
             return;
         }
         object->velocity = direction * speed_of_object(*object);
+    } else if (type == MessageType::register_player) {
+        auto name = istr.get<std::string>();
+        auto player = create_player(event.peer->address, name);
+        spdlog::info("added player {}", player.name);
+        broadcast_new_player(player);
+        
+        auto new_object = create_game_object();
+        m_game_objects.push_back(new_object);
+        m_player_to_object.insert({player.id, new_object.id});
+
+        OutByteStream register_message;
+        register_message << MessageType::register_player;
+        register_message << player.id << new_object.id;
+        write_objects(register_message);
+        send_bytes<true>(register_message.get_span(), event.peer);
+
+        for (const auto& old_player : m_players) {
+            OutByteStream out;
+            out << MessageType::list_update << old_player;
+            send_bytes<true>(out.get_span(), event.peer);
+        }
+        
+        event.peer->data = new uint32_t(player.id);
+
+        add_player(player);
+        
     } else {
         spdlog::warn("unsupported message type from client: {}", type);
     }
@@ -127,20 +130,19 @@ void GameServer::on_finish() {
 
 void GameServer::update() {
     if (!m_connected) {
-        ENetAddress address;
-        enet_address_set_host(&address, "localhost");
-        address.port = s_matchmaking_server_port;
-        spdlog::warn("my port: {}", m_host->address.port);
-        auto matchmaking = enet_host_connect(m_host, &address, 2, 0);
         if (matchmaking == nullptr) {
-            spdlog::error("can't connect to the matchmaking server");
-            return;
-            //throw std::runtime_error("can't connect to matchmaking server");
+            ENetAddress address;
+            enet_address_set_host(&address, "localhost");
+            address.port = s_matchmaking_server_port;
+            matchmaking = enet_host_connect(m_host, &address, 2, 0);
+        } else {
+            OutByteStream msg;
+            msg << MessageType::server_ready << m_name << m_host->address.host << m_host->address.port << m_id;
+            spdlog::info("registering with matchmaking server...");
+            if (send_bytes<true>(msg.get_span(), matchmaking) == 0) {
+                m_connected = true;
+            }
         }
-        OutByteStream msg;
-        msg << MessageType::server_ready << m_name << m_host->address.host << m_host->address.port << m_id;
-        send_bytes<true>(msg.get_span(), matchmaking);
-        m_connected = true;
     }
 
     process_robots();
@@ -212,10 +214,10 @@ void GameServer::update_physics(float dt) {
 }
 
 
-Player GameServer::create_player(const ENetAddress& address) {
+Player GameServer::create_player(const ENetAddress& address, const std::string& name) {
     auto id = generate_id();
     Player player;
-    player.name = generate_name(id); 
+    player.name = name;
     player.address = address; 
     player.id = id; 
     player.ping = 0;
@@ -228,7 +230,7 @@ void GameServer::send_ping() {
     OutByteStream ping_msg;
     ping_msg << MessageType::ping << uint32_t(m_players.size());
     for (const auto& peer : peers) {
-        if (peer.address.port == 0) {
+        if (peer.address.port == 0 || peer.address.port == s_matchmaking_server_port) {
             // don't know what it is. Enet implementation detail, I suppose
             continue;
         }
@@ -256,7 +258,7 @@ void GameServer::update_players() {
     write_objects(update_info);
 
     for (auto& peer : peers) {
-        if (peer.state != ENET_PEER_STATE_CONNECTED) {
+        if (peer.state != ENET_PEER_STATE_CONNECTED || peer.address.port == s_matchmaking_server_port) {
             continue;
         }
         auto player = get_player(peer.address);

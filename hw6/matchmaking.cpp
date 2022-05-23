@@ -5,7 +5,7 @@
 
 
 int main() {
-    spdlog::info("mathmaking...");
+    spdlog::info("matchmaking...");
     auto host = create_host(s_matchmaking_server_port);
     MatchMakingServer matchmaking(host);
     matchmaking.run();

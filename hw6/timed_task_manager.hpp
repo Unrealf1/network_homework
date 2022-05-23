@@ -24,7 +24,10 @@ public:
             );
             if (since_last_execution > task.execution_period) {
                 if (!task.task()) {
+                   //auto copy = it;
+                   //--copy;
                    m_tasks.erase(it);
+                   //it = copy;
                 }
                 ++tasks_launched;
             }          

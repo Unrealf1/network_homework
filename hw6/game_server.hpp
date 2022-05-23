@@ -234,10 +234,9 @@ private:
     std::vector<Robot> m_robots;
     uint32_t m_next_player_id = 0;
     uint32_t m_next_object_id = 0;
-    ENetHost* m_host;
-    TimedTaskManager<game_clock_t> m_task_manager;
     typename game_clock_t::time_point m_start_time;   
     float m_dt = float(s_server_tick_time.count()) / 1000.0f;
+    bool m_connected = false;
 
     inline static const std::array s_nicknames = {
         "Rames Janor", "Nova", "Deckard Cain", "Dark Wanderer",

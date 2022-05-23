@@ -35,7 +35,6 @@ struct Lobby {
     std::vector<Mod> mods;
     std::vector<player_t> players;
     uint8_t max_players;
-    uint8_t cur_players;
     uint16_t max_mmr;
     uint16_t min_mmr;
     uint16_t avg_mmr;
@@ -51,7 +50,7 @@ inline OutByteStream& operator<<(OutByteStream& ostr, const Lobby<player_t>& lob
     for (const auto& mod : lobby.mods) {
         ostr << mod;
     }
-    return ostr << lobby.max_players << lobby.cur_players
+    return ostr << lobby.max_players 
         << lobby.max_mmr << lobby.min_mmr 
         << lobby.avg_mmr << lobby.state;
 }
@@ -67,5 +66,5 @@ inline InByteStream& operator>>(InByteStream& istr, Lobby<player_t>& lobby) {
         lobby.mods.push_back(istr.get<Mod>());
     }
 
-    return istr >> lobby.max_players >> lobby.cur_players >> lobby.max_mmr >> lobby.min_mmr >> lobby.avg_mmr >> lobby.state;
+    return istr >> lobby.max_players >> lobby.max_mmr >> lobby.min_mmr >> lobby.avg_mmr >> lobby.state;
 }

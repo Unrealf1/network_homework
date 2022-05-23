@@ -21,4 +21,5 @@ int main(int argc, char** argv) {
     auto host = create_host(port);
     GameServer server(host, name, port);
     server.run();
+    enet_host_destroy(host);
 }

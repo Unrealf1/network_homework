@@ -119,16 +119,6 @@ void GameServer::on_start() {
         spawn_robot();
     }
 
-    ENetAddress address;
-    enet_address_set_host(&address, "localhost");
-    address.port = s_matchmaking_server_port;
-    auto matchmaking = enet_host_connect(m_host, &address, 2, 0);
-    if (matchmaking == nullptr) {
-        throw std::runtime_error("can't connect to matchmaking server");
-    }
-    OutByteStream msg;
-    msg << MessageType::server_ready << m_name << m_host->address.host << m_host->address.port << m_id;
-    send_bytes<true>(msg.get_span(), matchmaking);
 }
 
 void GameServer::on_finish() {
@@ -136,6 +126,23 @@ void GameServer::on_finish() {
 }
 
 void GameServer::update() {
+    if (!m_connected) {
+        ENetAddress address;
+        enet_address_set_host(&address, "localhost");
+        address.port = s_matchmaking_server_port;
+        spdlog::warn("my port: {}", m_host->address.port);
+        auto matchmaking = enet_host_connect(m_host, &address, 2, 0);
+        if (matchmaking == nullptr) {
+            spdlog::error("can't connect to the matchmaking server");
+            return;
+            //throw std::runtime_error("can't connect to matchmaking server");
+        }
+        OutByteStream msg;
+        msg << MessageType::server_ready << m_name << m_host->address.host << m_host->address.port << m_id;
+        send_bytes<true>(msg.get_span(), matchmaking);
+        m_connected = true;
+    }
+
     process_robots();
     processs_collisions();
     update_screen();

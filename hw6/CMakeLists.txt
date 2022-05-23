@@ -49,3 +49,8 @@ target_link_libraries(proxy6 PUBLIC ${external_libraries} bytestream)
 add_executable(server6 server.cpp game_server.cpp)
 target_link_libraries(server6 PRIVATE project_options project_warnings)
 target_link_libraries(server6 PUBLIC ${external_libraries} bytestream)
+
+add_executable(client6 client.cpp game_server.cpp)
+target_link_libraries(client6 PRIVATE project_options project_warnings)
+target_link_libraries(client6 PUBLIC ${external_libraries} bytestream)
+

@@ -12,6 +12,7 @@
 
 inline ENetHost* create_host(uint16_t port) {
     if (int error = enet_initialize() != 0) {
+        atexit(enet_deinitialize);
         spdlog::error("could not initialize enet, error code {}", error);
         exit(error);
     }
@@ -31,9 +32,10 @@ inline ENetHost* create_host(uint16_t port) {
             incoming_bandwith, 
             outcoming_bandwith
     );
+    spdlog::info("created host on port {}", server->address.port);
 
     if (server == nullptr) {
-        std::runtime_error("could node create enet server");
+        throw std::runtime_error("could node create enet server");
     }
 
     return server;

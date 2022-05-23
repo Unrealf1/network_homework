@@ -20,9 +20,24 @@ void MatchMakingServer::process_data(ENetEvent& event) {
     if (type == MessageType::lobby_list_update) {
         send_lobby_list(event.peer);
     } else if (type == MessageType::lobby_create) {
-        m_lobbies.push_back(istr.get<server_lobby_t>());
+        auto new_lobby = istr.get<server_lobby_t>();
+        if (std::ranges::find_if(m_lobbies, [&](const auto& lobby) {return lobby.name == new_lobby.name;}) != m_lobbies.end()) {
+            return;
+        }
+        m_lobbies.push_back(std::move(new_lobby));
+        spdlog::info("created new lobby with name: \"{}\"", m_lobbies.back().name);
     } else if (type == MessageType::lobby_join) {
         auto index = istr.get<size_t>();
+        if (index > m_lobbies.size()) {
+            return;
+        }
+        if (m_lobbies[index].max_players == m_lobbies[index].players.size()) {
+            return;
+        }
+        spdlog::info("connection player to the lobby {}", index);
+        OutByteStream msg;
+        msg << MessageType::lobby_join << index;
+        send_bytes<true>(msg.get_span(), event.peer);
         m_lobbies[index].players.emplace_back(istr.get<std::string>(), event.peer);
     } else if (type == MessageType::lobby_start) {
         auto index = istr.get<size_t>();
@@ -64,7 +79,6 @@ void MatchMakingServer::send_lobby_list(ENetPeer* to) {
             .mods = lobby.mods,
             .players = {},
             .max_players = lobby.max_players,
-            .cur_players = lobby.cur_players,
             .max_mmr = lobby.max_mmr,
             .min_mmr = lobby.min_mmr,
             .avg_mmr = lobby.avg_mmr,

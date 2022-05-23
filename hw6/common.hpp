@@ -146,7 +146,6 @@ inline GameObject interpolate(const GameObject& from, const GameObject& to, floa
 
 
 inline static const std::chrono::milliseconds s_client_frame_time = 20ms;
-inline static const std::chrono::milliseconds s_server_tick_time = 40ms;
 inline static const vec2 s_simulation_borders = {25, 25};
-inline static const uint16_t s_matchmaking_server_port = 7946;
+inline static const uint16_t s_matchmaking_server_port = 7947;
 

@@ -65,7 +65,7 @@ public:
         }
     }
 
-    static constexpr std::chrono::milliseconds s_update_time = 40ms;
+    static constexpr std::chrono::milliseconds s_update_time = 60ms;
 private:
     size_t m_last_num_players = 0;
     std::string m_name;
@@ -235,7 +235,7 @@ private:
     uint32_t m_next_player_id = 0;
     uint32_t m_next_object_id = 0;
     typename game_clock_t::time_point m_start_time;   
-    float m_dt = float(s_server_tick_time.count()) / 1000.0f;
+    float m_dt = float(s_update_time.count()) / 1000.0f;
     bool m_connected = false;
     ENetPeer* matchmaking = nullptr;
 

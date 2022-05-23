@@ -25,7 +25,7 @@ public:
         spdlog::debug("have {} snapshots in flight", state.snapshots.size());
         state.nosleep = state.snapshots.size() > 2;
         
-        if (state.snapshot_progress == s_server_tick_time / s_client_frame_time) {
+        if (state.snapshot_progress == GameServer::s_update_time / s_client_frame_time) {
             // there's snapshot available and previous was finished.
             // moving to the next spanphot
             state.snapshot_progress = 0;
@@ -44,7 +44,7 @@ public:
         } 
 
         auto& next_snapshot = state.snapshots.front();
-        float snapshot_ratio = float(state.snapshot_progress) / float(s_server_tick_time / s_client_frame_time);
+        float snapshot_ratio = float(state.snapshot_progress) / float(GameServer::s_update_time / s_client_frame_time);
         for (size_t i = 0; i < state.objects.size(); ++i) {
             if (i == next_snapshot.objects.size()) {
                 break;
@@ -88,7 +88,7 @@ private:
                 GameObject new_estimation = snapshot_object;
 
                 for (const Snapshot& snap : state.snapshots) {
-                    process_object(new_estimation, snap.direction, float(s_server_tick_time.count()) / 1000.0f);
+                    process_object(new_estimation, snap.direction, float(GameServer::s_update_time.count()) / 1000.0f);
                 }
                 state.from_interpolation = state.my_object;
                 state.my_object = new_estimation;

@@ -23,25 +23,28 @@ GameServer::GameServer(ENetHost* host, const std::string& name, uint32_t id)
             update_players();
             return true;
         }, 
-        s_server_tick_time);
+        s_update_time);
         
     m_task_manager.add_task([this] {
         if (m_players.empty()) {
             m_alive = false;
+            spdlog::warn("closing the server as there are no players");
         }
         return true;
-    }, 10s);
+    }, 10s, 20s);
 
     spdlog::set_level(spdlog::level::info);
 }
 
 
 void GameServer::process_new_connection(ENetEvent& event) {
+    spdlog::info("new connection on port {}", event.peer->address.port);
 }
 
 void GameServer::process_data(ENetEvent& event) {
     InByteStream istr(event.packet->data, event.packet->dataLength);
     MessageType type;
+    spdlog::info("data");
     istr >> type;
     if (type == MessageType::game_update) {
         spdlog::error("game updates from clients are deprecated");
@@ -59,6 +62,7 @@ void GameServer::process_data(ENetEvent& event) {
 
         object->position = position;
     } else if (type == MessageType::input) {
+        spdlog::info("input");
         vec2 direction;
         istr >> direction;
         direction = glm::normalize(direction);

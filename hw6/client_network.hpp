@@ -208,10 +208,12 @@ private:
     }
 
     void connect_to_game_server(InByteStream& istr) {
-        spdlog::info("Starting connection process...");
         state.mode = ClientMode::connecting;
         auto server_info = istr.get<GameServerInfo>();
-        server_address = server_info.address;
+        server_address.port = server_info.address.port;
+        enet_address_set_host(&server_address, "localhost");
+        //server_address = server_info.address;
+        spdlog::info("Starting connection process (port: {})", server_address.port);
         state.tasks.add_task([this]{
             server_connection();
             return state.mode != ClientMode::connected;
@@ -220,17 +222,22 @@ private:
 
     void server_connection() {
         if (state.mode == ClientMode::connecting) {
-            if (server != nullptr) {
+            if (server != nullptr && server->state == ENET_PEER_STATE_CONNECTED) {
                 OutByteStream msg;
                 msg << MessageType::register_player << state.name;
-                if (send_bytes<true>(msg.get_span(), server)) {
+                if (send_bytes<true>(msg.get_span(), server) == 0) {
                     state.mode = ClientMode::connected;
                 }
-                spdlog::info("registering at game server");
+                spdlog::info("registering at game server (port: {})", server_address.port);
             } else {
-                server = enet_host_connect(client, &server_address, 2, 0);
+                if (server != nullptr) {
+                    spdlog::info("state: {}", server->state);
+                } else {
+                    server = enet_host_connect(client, &server_address, 2, 0);
+
+                }
             }
-        }
+        } 
     }
 
     void ask_for_lobby_update() {

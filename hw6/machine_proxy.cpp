@@ -10,7 +10,7 @@ class ProxyServer: public BaseServer<ProxyServer> {
 public:
     ProxyServer(ENetHost* host): BaseServer(host) {}
 
-    static constexpr std::chrono::milliseconds s_update_time = 100ms;
+    static constexpr std::chrono::milliseconds s_update_time = 10ms;
 public:
     void update() {
         if (matchmaking == nullptr) {
@@ -30,7 +30,7 @@ public:
     }
     void on_start() {}
     void on_finish() {}
-    void process_new_connection(ENetEvent&) {}
+    void process_new_connection(ENetEvent&) { }
 
     void process_data(ENetEvent& event) {
         InByteStream istr(event.packet->data, event.packet->dataLength);

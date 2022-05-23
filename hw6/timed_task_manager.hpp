@@ -27,9 +27,7 @@ public:
                 if (!task.task()) {
                    auto copy = it;
                    --copy;
-                   std::cout << "before erase "<< m_tasks.size() << '\n';
                    m_tasks.erase(it);
-                   std::cout << "after erase "<< m_tasks.size() << '\n';
                    it = copy;
                 } else {
                    task.last_execution = current_time;

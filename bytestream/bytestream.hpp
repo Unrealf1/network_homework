@@ -41,6 +41,10 @@ public:
         return {m_cursor, m_buffer.end()};
     }
 
+    std::span<const std::byte> get_span() const {
+        return {m_cursor, m_buffer.end()};
+    }
+
     template<typename T>
     std::enable_if_t<std::is_trivially_copyable_v<T>, void> read(T& item) {
         decltype(m_buffer)::iterator::difference_type size = sizeof(item);
